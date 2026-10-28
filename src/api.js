@@ -1,0 +1,1 @@
+export async function api(url,body,method=body?'POST':'GET'){const res=await fetch('/api'+url,{method,credentials:'same-origin',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined});const d=await res.json();if(!res.ok)throw new Error(d.error||'Não foi possível conectar.');return d;}

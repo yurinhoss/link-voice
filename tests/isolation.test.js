@@ -1,0 +1,39 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import {mkdtemp,rm} from 'node:fs/promises';import {tmpdir} from 'node:os';import {join} from 'node:path';import {io} from 'socket.io-client';import {createApp} from '../server/index.js';
+test('individual login, tenant isolation, invitations and scoped realtime signaling',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'link-test-'));const svc=await createApp({dataDir:dir,origin:'http://localhost',production:false});await new Promise(r=>svc.http.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+svc.http.address().port;const sockets=[];
+ async function req(p,body,cookie,method=body?'POST':'GET',origin='http://localhost'){const r=await fetch(base+'/api'+p,{method,headers:{origin,...(cookie?{cookie}:{}),...(body?{'content-type':'application/json'}:{})},body:body?JSON.stringify(body):undefined});return {status:r.status,data:await r.json(),cookie:r.headers.get('set-cookie')?.split(';')[0]};}
+ const connect=async cookie=>{const s=io(base,{transports:['websocket'],extraHeaders:{origin:'http://localhost',cookie},reconnection:false});sockets.push(s);await new Promise((resolve,reject)=>{s.once('connect',resolve);s.once('connect_error',reject);});return s;};
+ const ack=(s,data)=>new Promise((resolve,reject)=>s.timeout(2000).emit('join',data,(e,d)=>e?reject(e):resolve(d)));
+ try{
+ assert.equal((await req('/tenants')).status,401);
+ assert.equal((await req('/auth/register',{name:'Bad',email:'bad@example.test',password:'strong-pass-123'},null,'POST','https://evil.example')).status,403);
+ const alice=await req('/auth/register',{name:'Alice',email:'alice@example.test',password:'alice-pass-123'});assert.equal(alice.status,201);assert.ok(alice.cookie.includes('link_session='));
+ const bob=await req('/auth/register',{name:'Bob',email:'bob@example.test',password:'bob-password-123'});assert.equal(bob.status,201);
+ const charlie=await req('/auth/register',{name:'Charlie',email:'charlie@example.test',password:'charlie-pass-123'});assert.equal(charlie.status,201);
+ assert.equal((await req('/auth/login',{email:'alice@example.test',password:'wrong'})).status,401);
+ const logged=await req('/auth/login',{email:'alice@example.test',password:'alice-pass-123'});assert.equal(logged.status,200);assert.equal(logged.data.user.id,alice.data.user.id);
+ assert.ok(!svc.db.prepare('SELECT password FROM users LIMIT 1').get().password.includes('alice-pass-123'));
+ const a=await req('/tenants',{name:'Team A'},alice.cookie),b=await req('/tenants',{name:'Team B'},bob.cookie);assert.equal(a.status,201);assert.equal(b.status,201);
+ const ad=await req('/tenants/'+a.data.id,null,alice.cookie),bd=await req('/tenants/'+b.data.id,null,bob.cookie);assert.equal(ad.data.rooms.length,3);
+ assert.equal((await req('/tenants/'+a.data.id,null,bob.cookie)).status,403);
+ assert.equal((await req('/tenants',null,bob.cookie)).data.tenants.length,1);
+ assert.equal((await req('/tenants/'+a.data.id+'/rooms',{name:'Injected'},bob.cookie)).status,403);
+ const as=await connect(alice.cookie),bs=await connect(bob.cookie),cs=await connect(charlie.cookie);
+ assert.ok((await ack(bs,{tenantId:a.data.id,roomId:ad.data.rooms[0].id})).error);
+ assert.ok((await ack(as,{tenantId:a.data.id,roomId:bd.data.rooms[0].id})).error);
+ assert.equal((await ack(as,{tenantId:a.data.id,roomId:ad.data.rooms[0].id})).ok,true);
+ assert.equal((await ack(bs,{tenantId:b.data.id,roomId:bd.data.rooms[0].id})).ok,true);
+ let leaked=false;bs.on('signal',()=>{leaked=true;});as.emit('signal',{target:bs.id,body:{description:{type:'offer',sdp:'cross-tenant'}}});await new Promise(r=>setTimeout(r,100));assert.equal(leaked,false);
+ const inv=await req('/tenants/'+a.data.id+'/invites',{},alice.cookie);assert.equal(inv.status,200);
+ assert.equal((await req('/invites/accept',{token:inv.data.token},charlie.cookie)).status,200);
+ assert.equal((await req('/tenants/'+a.data.id+'/rooms',{name:'No permission'},charlie.cookie)).status,403);
+ assert.equal((await req('/tenants/'+a.data.id+'/invites',{},charlie.cookie)).status,403);
+ assert.equal((await ack(cs,{tenantId:a.data.id,roomId:ad.data.rooms[0].id})).ok,true);
+ const signal=new Promise(resolve=>cs.once('signal',resolve));as.emit('signal',{target:cs.id,body:{description:{type:'offer',sdp:'same-room'}}});assert.equal((await signal).sender,as.id);
+ await req('/tenants/'+a.data.id+'/members/'+charlie.data.user.id,null,alice.cookie,'DELETE');assert.equal((await req('/tenants/'+a.data.id,null,charlie.cookie)).status,403);assert.ok((await ack(cs,{tenantId:a.data.id,roomId:ad.data.rooms[0].id})).error);
+ await req('/tenants/'+a.data.id+'/invites',null,alice.cookie,'DELETE');assert.equal((await req('/invites/accept',{token:inv.data.token},charlie.cookie)).status,404);
+ const inv2=await req('/tenants/'+a.data.id+'/invites',{},alice.cookie);svc.db.prepare('UPDATE invites SET expires=0').run();assert.equal((await req('/invites/accept',{token:inv2.data.token},charlie.cookie)).status,404);
+ assert.equal((await req('/tenants/'+a.data.id+'/members/'+alice.data.user.id,null,alice.cookie,'DELETE')).status,400);
+ await req('/auth/logout',{},alice.cookie);assert.equal((await req('/me',null,alice.cookie)).status,401);
+ }finally{sockets.forEach(s=>s.disconnect());await svc.close();await rm(dir,{recursive:true,force:true});}
+});
