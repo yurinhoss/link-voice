@@ -19,6 +19,7 @@ test('individual login, tenant isolation, invitations and scoped realtime signal
  assert.equal((await req('/tenants',null,bob.cookie)).data.tenants.length,1);
  assert.equal((await req('/tenants/'+a.data.id+'/rooms',{name:'Injected'},bob.cookie)).status,403);
  const as=await connect(alice.cookie),bs=await connect(bob.cookie),cs=await connect(charlie.cookie);
+ as.emit('signal',null);as.emit('status',null);as.emit('join',null);as.emit('join',{},'invalid-ack');
  assert.ok((await ack(bs,{tenantId:a.data.id,roomId:ad.data.rooms[0].id})).error);
  assert.ok((await ack(as,{tenantId:a.data.id,roomId:bd.data.rooms[0].id})).error);
  assert.equal((await ack(as,{tenantId:a.data.id,roomId:ad.data.rooms[0].id})).ok,true);
