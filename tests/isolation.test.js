@@ -6,6 +6,9 @@ test('individual login, tenant isolation, invitations and scoped realtime signal
  const ack=(s,data)=>new Promise((resolve,reject)=>s.timeout(2000).emit('join',data,(e,d)=>e?reject(e):resolve(d)));
  try{
  assert.equal((await req('/tenants')).status,401);
+ assert.equal((await req('/auth/register',{name:'Short',email:'short@example.test',password:'1234'})).status,400);
+ const short=await req('/auth/register',{name:'Five',email:'five@example.test',password:'12345'});assert.equal(short.status,201);
+ assert.equal((await req('/auth/login',{email:'five@example.test',password:'12345'})).status,200);
  assert.equal((await req('/auth/register',{name:'Bad',email:'bad@example.test',password:'strong-pass-123'},null,'POST','https://evil.example')).status,403);
  const alice=await req('/auth/register',{name:'Alice',email:'alice@example.test',password:'alice-pass-123'});assert.equal(alice.status,201);assert.ok(alice.cookie.includes('link_session='));
  const bob=await req('/auth/register',{name:'Bob',email:'bob@example.test',password:'bob-password-123'});assert.equal(bob.status,201);

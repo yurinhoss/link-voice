@@ -8,6 +8,7 @@ Aplicativo web simples, multi-tenant, com contas individuais, salas de voz e com
 - Cada espaço (tenant) possui membros e salas isolados. Uma conta pode participar de vários espaços.
 - Administradores criam salas, geram e revogam convites e removem membros.
 - Convites expiram em 24 horas, aceitam até 20 novos membros e só são armazenados como hash.
+- Entrada sem microfone para ouvir e compartilhar tela; ativação do microfone durante a chamada.
 - Voz WebRTC, microfone, compartilhamento de tela e presença via Socket.IO. Até 6 conexões por sala.
 - Autorização de tenant no servidor, inclusive no ingresso e na sinalização WebRTC.
 - Banco SQLite em volume persistente. Nenhuma conta ou senha padrão.
