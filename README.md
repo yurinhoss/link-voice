@@ -6,7 +6,9 @@ Aplicativo web simples, multi-tenant, com contas individuais, salas de voz e com
 
 - Cadastro e login com e-mail e senha; hash scrypt, sessão aleatória e cookie HttpOnly.
 - Cada espaço (tenant) possui membros e salas isolados. Uma conta pode participar de vários espaços.
-- Administradores criam salas, geram e revogam convites e removem membros.
+- Administradores criam, renomeiam e excluem salas de voz e canais de texto, geram e revogam convites e removem membros.
+- Canais de texto com mensagens persistentes, atualização automática e histórico paginado.
+- A exclusão de salas de voz em uso é bloqueada; excluir um canal de texto exige confirmação na interface e remove seu histórico.
 - Convites expiram em 24 horas, aceitam até 20 novos membros e só são armazenados como hash.
 - Entrada sem microfone para ouvir e compartilhar tela; ativação do microfone durante a chamada.
 - Voz WebRTC, microfone, câmera e compartilhamento de tela simultâneos, com presença via Socket.IO. Até 6 conexões por sala.
@@ -59,4 +61,8 @@ Recomendado: Chrome/Edge no computador, HTTPS e fones de ouvido. O navegador sol
 
 ## Escopo da primeira versão
 
-Sem gravação, chat de texto, envio de e-mail, recuperação de senha ou verificação de e-mail. Convites são compartilhados manualmente. A interface e as regras de isolamento têm testes locais; uma chamada real em redes diferentes exige validação com dois dispositivos e, conforme a rede, TURN.
+Sem gravação, envio de e-mail, recuperação de senha ou verificação de e-mail. Convites são compartilhados manualmente. A interface e as regras de isolamento têm testes locais; uma chamada real em redes diferentes exige validação com dois dispositivos e, conforme a rede, TURN.
+
+## Salas e canais
+
+Clique nos três pontos ao lado da sala ou do canal para mudar o nome ou excluir. Apenas o administrador vê essas opções; o servidor verifica as mesmas permissões. O botão + em Canais de texto cria um canal. Todos os membros do espaço podem ler e escrever nos seus canais, inclusive durante uma chamada de voz. Mensagens têm até 2.000 caracteres, são armazenadas no mesmo volume SQLite e carregam as 50 mais recentes com opção de abrir o histórico anterior. A interface busca novas mensagens a cada 3 segundos e atualiza a lista de canais a cada 8 segundos enquanto a página está visível.
