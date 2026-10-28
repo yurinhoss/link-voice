@@ -9,7 +9,9 @@ Aplicativo web simples, multi-tenant, com contas individuais, salas de voz e com
 - Administradores criam salas, geram e revogam convites e removem membros.
 - Convites expiram em 24 horas, aceitam até 20 novos membros e só são armazenados como hash.
 - Entrada sem microfone para ouvir e compartilhar tela; ativação do microfone durante a chamada.
-- Voz WebRTC, microfone, compartilhamento de tela e presença via Socket.IO. Até 6 conexões por sala.
+- Voz WebRTC, microfone, câmera e compartilhamento de tela simultâneos, com presença via Socket.IO. Até 6 conexões por sala.
+- Compartilhamento com botão de tela cheia e modo ampliado de compatibilidade.
+- Três temas escuros (Neon Club, Midnight e Playground), navegação por ícones e avatar local selecionável.
 - Autorização de tenant no servidor, inclusive no ingresso e na sinalização WebRTC.
 - Banco SQLite em volume persistente. Nenhuma conta ou senha padrão.
 
@@ -52,7 +54,7 @@ O WebRTC tenta conexão direta com STUN. Para redes restritivas, configure um se
 
 Não exponha a chave TURN no frontend. O Railway hospeda a aplicação e a sinalização; não substitui um relay TURN com suporte UDP/TCP.
 
-Recomendado: Chrome/Edge no computador, HTTPS e fones de ouvido. O navegador solicita o microfone ao entrar e uma tela/janela ao compartilhar. Compartilhamento de tela no celular depende do navegador. Áudio do sistema não está incluído; voz vem do microfone.
+Recomendado: Chrome/Edge no computador, HTTPS e fones de ouvido. O navegador solicita o microfone ao entrar e uma tela/janela ao compartilhar. Compartilhamento de tela no celular depende do navegador. Áudio do sistema não está incluído; voz vem do microfone. A câmera só é solicitada ao clicar em Ativar câmera durante uma chamada. Desligar a câmera ou sair encerra a captura. Temas e o avatar escolhido são preferências deste navegador; o avatar pessoal não é sincronizado entre participantes.
 
 ## Escopo da primeira versão
 

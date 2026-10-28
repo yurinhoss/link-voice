@@ -33,6 +33,9 @@ test('individual login, tenant isolation, invitations and scoped realtime signal
  assert.equal((await req('/tenants/'+a.data.id+'/rooms',{name:'No permission'},charlie.cookie)).status,403);
  assert.equal((await req('/tenants/'+a.data.id+'/invites',{},charlie.cookie)).status,403);
  assert.equal((await ack(cs,{tenantId:a.data.id,roomId:ad.data.rooms[0].id})).ok,true);
+ const cameraStatus=new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('Camera status timed out')),2000);const handler=list=>{if(list.find(m=>m.id===as.id)?.camera){clearTimeout(timer);cs.off('members',handler);resolve(list);}};cs.on('members',handler);});
+ as.emit('status',{muted:false,sharing:true,camera:true});const cameraMembers=await cameraStatus;assert.equal(cameraMembers.find(m=>m.id===as.id).sharing,true);assert.equal(cameraMembers.find(m=>m.id===as.id).camera,true);
+ const freshRoom=await ack(as,{tenantId:a.data.id,roomId:ad.data.rooms[1].id});assert.equal(freshRoom.members.find(m=>m.id===as.id).camera,false);assert.equal(freshRoom.members.find(m=>m.id===as.id).sharing,false);await ack(as,{tenantId:a.data.id,roomId:ad.data.rooms[0].id});
  const signal=new Promise(resolve=>cs.once('signal',resolve));as.emit('signal',{target:cs.id,body:{description:{type:'offer',sdp:'same-room'}}});assert.equal((await signal).sender,as.id);
  await req('/tenants/'+a.data.id+'/members/'+charlie.data.user.id,null,alice.cookie,'DELETE');assert.equal((await req('/tenants/'+a.data.id,null,charlie.cookie)).status,403);assert.ok((await ack(cs,{tenantId:a.data.id,roomId:ad.data.rooms[0].id})).error);
  await req('/tenants/'+a.data.id+'/invites',null,alice.cookie,'DELETE');assert.equal((await req('/invites/accept',{token:inv.data.token},charlie.cookie)).status,404);
