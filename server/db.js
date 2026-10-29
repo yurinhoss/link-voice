@@ -12,4 +12,6 @@ CREATE TABLE IF NOT EXISTS user_profiles(user_id TEXT PRIMARY KEY REFERENCES use
 CREATE TABLE IF NOT EXISTS text_channels(id TEXT PRIMARY KEY,tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,name TEXT NOT NULL COLLATE NOCASE,created INTEGER NOT NULL,UNIQUE(tenant_id,name));
 CREATE TABLE IF NOT EXISTS messages(id INTEGER PRIMARY KEY AUTOINCREMENT,channel_id TEXT NOT NULL REFERENCES text_channels(id) ON DELETE CASCADE,user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,body TEXT NOT NULL,created INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS messages_channel ON messages(channel_id,id);
-PRAGMA user_version=3;`);return db;}
+CREATE TABLE IF NOT EXISTS media_assets(id TEXT PRIMARY KEY,tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,kind TEXT NOT NULL CHECK(kind IN ('sound','image')),name TEXT NOT NULL,mime TEXT NOT NULL,data BLOB NOT NULL,size INTEGER NOT NULL,created INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS media_assets_tenant ON media_assets(tenant_id);
+PRAGMA user_version=4;`);return db;}

@@ -6,3 +6,8 @@ test('all sound effects schedule finite audio; local volume, stop and teardown c
  for(const sound of SOUNDS){board.play(sound.id,35);assert.equal(ctx.gains[0].gain.value,.35);assert.ok(ctx.sources.length);}
  board.volume(0);assert.equal(ctx.gains[0].gain.value,0);board.volume(500);assert.equal(ctx.gains[0].gain.value,1);board.stop();assert.ok(ctx.sources.every(n=>n.stopped));board.close();assert.equal(ctx.closed,true);
 });
+test('video file playback uses audio only, shares the effects volume, stops on leave and caps at 30 seconds',async()=>{
+ let audio,ctx;class AudioElement{constructor(){audio=this;}play(){this.played=true;return Promise.resolve();}pause(){this.paused=true;}removeAttribute(){this.src='';}load(){}}
+ class Context{constructor(){ctx=this;this.destination={};}resume(){return Promise.resolve();}close(){return Promise.resolve();}createGain(){this.master={gain:{value:1},connect(){}};return this.master;}createMediaElementSource(element){assert.equal(element,audio);return {connect:node=>assert.equal(node,this.master),disconnect(){}};}}
+ const board=createSoundboard(Context,AudioElement);board.playFile('/api/tenants/one/assets/two',45);assert.equal(audio.src,'/api/tenants/one/assets/two');assert.equal(audio.played,true);assert.equal(ctx.master.gain.value,.45);board.volume(0);assert.equal(ctx.master.gain.value,0);audio.currentTime=30;audio.ontimeupdate();assert.equal(audio.paused,true);assert.equal(audio.src,'');board.playFile('/another',80);board.stop();assert.equal(audio.paused,true);board.close();
+});

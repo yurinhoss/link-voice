@@ -1,7 +1,7 @@
 export const SOUNDS=[{id:'cricket',emoji:'🦗',name:'Grilo'},{id:'applause',emoji:'👏',name:'Aplausos'},{id:'rimshot',emoji:'🥁',name:'Ba dum tss'},{id:'horn',emoji:'📣',name:'Buzina'},{id:'magic',emoji:'✨',name:'Magia'}];
-export function createSoundboard(Context=globalThis.AudioContext||globalThis.webkitAudioContext){
- let ctx,master,nodes=[];
- const stop=()=>{for(const node of nodes){try{node.stop();}catch{}try{node.disconnect();}catch{}}nodes=[];};
+export function createSoundboard(Context=globalThis.AudioContext||globalThis.webkitAudioContext,AudioElement=globalThis.Audio){
+ let ctx,master,nodes=[],fileAudio=null,fileSource=null,fileTimer;
+ const stop=()=>{clearTimeout(fileTimer);if(fileAudio){fileAudio.pause();fileAudio.removeAttribute('src');fileAudio.load();fileAudio=null;}fileSource?.disconnect();fileSource=null;for(const node of nodes){try{node.stop();}catch{}try{node.disconnect();}catch{}}nodes=[];};
  function unlock(){if(!Context)return;try{if(!ctx){ctx=new Context();master=ctx.createGain();master.connect(ctx.destination);}ctx.resume().catch(()=>{});}catch{}}
  function volume(value){if(master)master.gain.value=Math.max(0,Math.min(100,Number(value)||0))/100;}
  function play(id,level=60){if(!SOUNDS.some(s=>s.id===id))return;unlock();if(!ctx)return;stop();volume(level);const now=ctx.currentTime;
@@ -13,5 +13,6 @@ export function createSoundboard(Context=globalThis.AudioContext||globalThis.web
  if(id==='horn'){tone(240,0,.8,.16,'sawtooth');tone(305,0,.8,.12,'sawtooth');}
  if(id==='magic')[523,659,784,1047,1319].forEach((f,i)=>tone(f,i*.09,.45,.17,'sine'));
  }
- return {unlock,play,volume,stop,close(){stop();ctx?.close().catch(()=>{});ctx=null;}};
+ function playFile(url,level=60,onError=()=>{}){unlock();if(!ctx)return;stop();volume(level);const audio=new AudioElement();fileAudio=audio;fileSource=ctx.createMediaElementSource(audio);fileSource.connect(master);audio.src=url;audio.ontimeupdate=()=>{if(fileAudio===audio&&audio.currentTime>=30)stop();};audio.onended=()=>{if(fileAudio===audio)stop();};audio.onerror=()=>{if(fileAudio===audio){stop();onError();}};audio.play().catch(()=>{if(fileAudio===audio){stop();onError();}});fileTimer=setTimeout(()=>{if(fileAudio===audio)stop();},30000);}
+ return {unlock,play,playFile,volume,stop,close(){stop();ctx?.close().catch(()=>{});ctx=null;}};
 }
