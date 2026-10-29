@@ -25,7 +25,7 @@ test('individual login, tenant isolation, invitations and scoped realtime signal
  assert.equal((await req('/auth/login',{email:'alice@example.test',password:'alice-pass-123'})).data.user.avatar,picture);
  assert.equal((await req('/me',null,bob.cookie)).data.user.avatar,null);
  const a=await req('/tenants',{name:'Team A'},alice.cookie),b=await req('/tenants',{name:'Team B'},bob.cookie);assert.equal(a.status,201);assert.equal(b.status,201);
- const ad=await req('/tenants/'+a.data.id,null,alice.cookie),bd=await req('/tenants/'+b.data.id,null,bob.cookie);assert.equal(ad.data.rooms.length,3);assert.equal(ad.data.members.find(m=>m.id===alice.data.user.id).avatar,picture);
+ const ad=await req('/tenants/'+a.data.id,null,alice.cookie),bd=await req('/tenants/'+b.data.id,null,bob.cookie);assert.equal(ad.data.rooms.length,4);assert.equal(ad.data.members.find(m=>m.id===alice.data.user.id).avatar,picture);
  assert.equal((await req('/tenants/'+a.data.id,null,bob.cookie)).status,403);
  assert.equal((await req('/tenants',null,bob.cookie)).data.tenants.length,1);
  assert.equal((await req('/tenants/'+a.data.id+'/rooms',{name:'Injected'},bob.cookie)).status,403);
