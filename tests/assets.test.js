@@ -16,6 +16,8 @@ test('saved video sounds and image reactions persist, support ranges and stay in
  assert.equal((await req(route+'?kind=image',{cookie:alice.cookie,body:Buffer.from('<svg>not an image</svg>'),raw:true})).status,400);
  assert.equal((await req(route+'?kind=image',{cookie:alice.cookie,body:mp4,raw:true})).status,400);
  assert.equal((await req(route+'?kind=image',{cookie:eve.cookie,body:png,raw:true})).status,403);
+ const large=await req(route+'?kind=image&name=Large',{cookie:alice.cookie,body:Buffer.concat([png,Buffer.alloc(3*1024*1024)]),raw:true});assert.equal(large.status,201);const largeAsset=(await large.json()).asset;assert.equal((await req(route+'/'+largeAsset.id,{cookie:alice.cookie,method:'DELETE'})).status,200);
+ assert.equal((await req(route+'?kind=sound',{cookie:alice.cookie,body:Buffer.concat([mp4,Buffer.alloc(16*1024*1024)]),raw:true})).status,413);
  const image=await (await req(route+'?kind=image&name=Sticker',{cookie:alice.cookie,body:png,raw:true})).json();assert.ok(image.asset.id);
  const sound=await (await req(route+'?kind=sound&name=Video',{cookie:alice.cookie,body:mp4,raw:true})).json();assert.ok(sound.asset.id);
  assert.equal((await req(route+'/'+sound.asset.id)).status,401);assert.equal((await req(route+'/'+sound.asset.id,{cookie:eve.cookie})).status,403);

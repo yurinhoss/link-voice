@@ -15,10 +15,10 @@ export function registerAssets({app,db,auth,tenantAuth,fail}){
  const base='/api/tenants/:tid/assets';
  const metadata=row=>({...row,url:assetUrl(row.tenant_id,row.id)});
  app.get(base,auth,tenantAuth,(req,res)=>res.json({assets:db.prepare('SELECT id,tenant_id,user_id,kind,name,mime,created FROM media_assets WHERE tenant_id=? ORDER BY created DESC').all(req.params.tid).map(metadata)}));
- app.post(base,auth,tenantAuth,express.raw({type:()=>true,limit:'15mb'}),(req,res)=>{
+ app.post(base,auth,tenantAuth,express.raw({type:()=>true,limit:'20mb'}),(req,res)=>{
   const detected=detectAsset(req.body),kind=req.query.kind;
   if(!detected||detected.kind!==kind)return fail(res,400,'Envie um vídeo MP4/WebM ou uma imagem PNG, JPG, WebP ou GIF válida.');
-  if(kind==='image'&&req.body.length>2*1024*1024)return fail(res,413,'A imagem deve ter até 2 MB.');
+  if(req.body.length>(kind==='image'?20:15)*1024*1024)return fail(res,413,kind==='image'?'A imagem deve ter até 20 MB.':'O vídeo deve ter até 15 MB.');
   if(db.prepare('SELECT count(*) AS n FROM media_assets WHERE tenant_id=? AND user_id=?').get(req.params.tid,req.user.id).n>=40)return fail(res,400,'Limite de 40 arquivos por pessoa neste espaço. Exclua um arquivo para enviar outro.');
   if(db.prepare('SELECT coalesce(sum(length(data)),0) AS n FROM media_assets WHERE tenant_id=?').get(req.params.tid).n+req.body.length>150*1024*1024)return fail(res,400,'O espaço atingiu o limite de 150 MB de arquivos.');
   const id=randomUUID(),name=typeof req.query.name==='string'?req.query.name.trim().slice(0,50):'';
