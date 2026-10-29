@@ -54,3 +54,5 @@ body,.shell{background:#1e1f22}
 .controls{background:#232428;border-color:#3f4147;box-shadow:none}
 .auth-story{background:#232428}
 .auth-form{background:#313338}
+
+.participant-volume{position:absolute;top:10px;right:10px;z-index:4;width:30px;height:30px;display:grid;place-items:center;border:1px solid #ffffff26;border-radius:8px;background:#111214b3;color:#eee;padding:0}.participant-volume:hover{background:#404249}.participant .raised-badge{right:48px}

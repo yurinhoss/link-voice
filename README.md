@@ -11,6 +11,7 @@ Aplicativo web simples, multi-tenant, com contas individuais, salas de voz e com
 - A exclusão de salas de voz em uso é bloqueada; excluir um canal de texto exige confirmação na interface e remove seu histórico.
 - Convites expiram em 24 horas, aceitam até 20 novos membros e só são armazenados como hash.
 - Entrada sem microfone para ouvir e compartilhar tela; ativação do microfone durante a chamada.
+- Volume individual de 0 a 100% e silenciamento local por participante, salvo neste navegador. Clique no ícone de alto-falante do participante ou use o botão direito no cartão.
 - Voz WebRTC, microfone, câmera e compartilhamento de tela simultâneos, com presença via Socket.IO. Até 6 conexões por sala.
 - Compartilhamento com botão de tela cheia e modo ampliado de compatibilidade.
 - Cartões de participantes, controles centralizados, reações e mão levantada sincronizadas por sala.
