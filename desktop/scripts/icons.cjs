@@ -1,0 +1,2 @@
+const fs=require('node:fs');const path=require('node:path');const {Resvg}=require('@resvg/resvg-js');const pngToIco=require('png-to-ico').default||require('png-to-ico');
+(async()=>{const dir=path.join(__dirname,'../assets');const svg=fs.readFileSync(path.join(dir,'logo.svg'));const png=new Resvg(svg,{fitTo:{mode:'width',value:512}}).render().asPng();fs.writeFileSync(path.join(dir,'icon.png'),png);fs.writeFileSync(path.join(dir,'icon.ico'),await pngToIco(png));})().catch(error=>{console.error(error);process.exit(1);});

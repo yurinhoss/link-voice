@@ -1,0 +1,55 @@
+{
+  "name": "link-voice-desktop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Link para Windows — voz, vídeo, tela e música com sua turma",
+  "author": "Link",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "npm run icons && electron .",
+    "icons": "node scripts/icons.cjs",
+    "test": "node --test test/*.test.cjs",
+    "dist": "npm run icons && electron-builder --win nsis --x64 --publish never"
+  },
+  "build": {
+    "appId": "com.linkvoice.desktop",
+    "productName": "Link",
+    "copyright": "Copyright © 2026 Link",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "*.cjs",
+      "picker.*",
+      "offline.*",
+      "assets/**"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.ico",
+      "artifactName": "Link-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Link",
+      "deleteAppDataOnUninstall": false
+    },
+    "publish": null
+  },
+  "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "electron": "^45.1.0",
+    "electron-builder": "^26.18.0",
+    "png-to-ico": "^3.0.2"
+  }
+}

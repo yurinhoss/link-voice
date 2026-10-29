@@ -5,3 +5,5 @@ data
 .env
 .env.*
 *.db*
+
+desktop/
