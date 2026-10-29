@@ -15,8 +15,11 @@ CREATE TABLE IF NOT EXISTS messages(id INTEGER PRIMARY KEY AUTOINCREMENT,channel
 CREATE INDEX IF NOT EXISTS messages_channel ON messages(channel_id,id);
 CREATE TABLE IF NOT EXISTS media_assets(id TEXT PRIMARY KEY,tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,kind TEXT NOT NULL CHECK(kind IN ('sound','image')),name TEXT NOT NULL,mime TEXT NOT NULL,data BLOB NOT NULL,size INTEGER NOT NULL,created INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS media_assets_tenant ON media_assets(tenant_id);
+CREATE TABLE IF NOT EXISTS chat_files(id TEXT PRIMARY KEY,channel_id TEXT NOT NULL REFERENCES text_channels(id) ON DELETE CASCADE,user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,message_id INTEGER REFERENCES messages(id) ON DELETE CASCADE,name TEXT NOT NULL,mime TEXT NOT NULL,size INTEGER NOT NULL,data BLOB NOT NULL,created INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS chat_files_channel ON chat_files(channel_id,user_id);
+CREATE INDEX IF NOT EXISTS chat_files_message ON chat_files(message_id);
 CREATE TABLE IF NOT EXISTS room_music(room_id TEXT PRIMARY KEY REFERENCES rooms(id) ON DELETE CASCADE,state TEXT NOT NULL);
 `);
 if(!db.prepare('PRAGMA table_info(rooms)').all().some(c=>c.name==='kind'))db.exec("ALTER TABLE rooms ADD COLUMN kind TEXT NOT NULL DEFAULT 'voice'");
 if(db.prepare('PRAGMA user_version').get().user_version<5){for(const t of db.prepare('SELECT id FROM tenants').all())if(!db.prepare("SELECT id FROM rooms WHERE tenant_id=? AND kind='music'").get(t.id))db.prepare("INSERT INTO rooms(id,tenant_id,name,created,kind) VALUES(?,?,?,?,?)").run(randomUUID(),t.id,'Música',Date.now(),'music');db.exec('PRAGMA user_version=5');}
-return db;}
+db.exec('PRAGMA user_version=6');return db;}
