@@ -1,4 +1,4 @@
-import {test} from 'node:test';import assert from 'node:assert/strict';import {requestScreenShare,replaceScreenTracks,remoteAudioTracks} from '../src/screenShare.js';
+import {test} from 'node:test';import assert from 'node:assert/strict';import {requestScreenShare,replaceScreenTracks,remoteAudioTracks,isScreenTrack} from '../src/screenShare.js';
 const sender=()=>({track:undefined,async replaceTrack(track){this.track=track;}});
 const peer=()=>({video:sender(),screenAudio:sender(),audio:sender()});
 test('screen capture requests tab/system sound without forcing unsupported audio sources',async()=>{
@@ -10,3 +10,10 @@ test('shared audio is sent independently of the microphone, including to newly j
 });
 test('video-only capture clears old shared audio and remains usable',async()=>{const p=peer();p.screenAudio.track={id:'old'};const video={id:'screen'};await replaceScreenTracks(p,{getVideoTracks:()=>[video],getAudioTracks:()=>[]});assert.equal(p.video.track,video);assert.equal(p.screenAudio.track,null);});
 test('playback includes both voice and shared audio as independent tracks',()=>{const voice={id:'voice',readyState:'live'},tab={id:'tab',readyState:'live'},ended={id:'ended',readyState:'ended'};assert.deepEqual(remoteAudioTracks({getAudioTracks:()=>[voice,tab,ended]}),[voice,tab]);});
+
+test('receiver separates shared sound and video from conversation audio',()=>{
+ const microphone={},shared={};
+ assert.equal(isScreenTrack({track:{kind:'audio'},transceiver:microphone},shared),false);
+ assert.equal(isScreenTrack({track:{kind:'audio'},transceiver:shared},shared),true);
+ assert.equal(isScreenTrack({track:{kind:'video'},transceiver:{}},shared),true);
+});

@@ -20,3 +20,7 @@ export async function replaceScreenTracks(peer, stream) {
 export function remoteAudioTracks(stream) {
   return stream.getAudioTracks().filter(track => track.readyState !== 'ended');
 }
+
+export function isScreenTrack(event,screenAudioTransceiver) {
+  return event.track.kind==='video'||event.transceiver===screenAudioTransceiver;
+}
