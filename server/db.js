@@ -22,4 +22,13 @@ CREATE TABLE IF NOT EXISTS room_music(room_id TEXT PRIMARY KEY REFERENCES rooms(
 `);
 if(!db.prepare('PRAGMA table_info(rooms)').all().some(c=>c.name==='kind'))db.exec("ALTER TABLE rooms ADD COLUMN kind TEXT NOT NULL DEFAULT 'voice'");
 if(db.prepare('PRAGMA user_version').get().user_version<5){for(const t of db.prepare('SELECT id FROM tenants').all())if(!db.prepare("SELECT id FROM rooms WHERE tenant_id=? AND kind='music'").get(t.id))db.prepare("INSERT INTO rooms(id,tenant_id,name,created,kind) VALUES(?,?,?,?,?)").run(randomUUID(),t.id,'Música',Date.now(),'music');db.exec('PRAGMA user_version=5');}
-db.exec('PRAGMA user_version=6');return db;}
+if(!db.prepare('PRAGMA table_info(text_channels)').all().some(c=>c.name==='kind'))db.exec("ALTER TABLE text_channels ADD COLUMN kind TEXT NOT NULL DEFAULT 'text'");
+db.exec("CREATE UNIQUE INDEX IF NOT EXISTS frequent_channel_per_tenant ON text_channels(tenant_id) WHERE kind='frequent'");
+for(const t of db.prepare('SELECT id FROM tenants').all())ensureFrequentChannel(db,t.id);
+db.exec('PRAGMA user_version=7');return db;}
+export function ensureFrequentChannel(db,tenantId){
+ if(db.prepare("SELECT id FROM text_channels WHERE tenant_id=? AND kind='frequent'").get(tenantId))return;
+ let name='Usados com frequência',suffix=1;
+ while(db.prepare('SELECT id FROM text_channels WHERE tenant_id=? AND name=? COLLATE NOCASE').get(tenantId,name))name='Usados com frequência '+(++suffix);
+ db.prepare('INSERT INTO text_channels(id,tenant_id,name,created,kind) VALUES(?,?,?,?,?)').run(randomUUID(),tenantId,name,Date.now(),'frequent');
+}

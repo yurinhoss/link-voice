@@ -25,7 +25,14 @@ test('room management, persistent text channels, message pagination and tenant p
     const invite=await req(root+'/invites',{},owner.cookie);
     await req('/invites/accept',{token:invite.data.token},member.cookie);
     const detail=await req(root,null,owner.cookie),rid=detail.data.rooms[0].id;
-    assert.deepEqual(detail.data.channels,[]);
+    const frequent=detail.data.channels.find(c=>c.kind==='frequent');assert.ok(frequent);
+    const savedPath=root+'/channels/'+frequent.id;
+    assert.equal((await req(root,null,member.cookie)).data.channels.filter(c=>c.kind==='frequent').length,1);
+    assert.equal((await req(savedPath,{name:'Renamed'},owner.cookie,'PATCH')).status,400);
+    assert.equal((await req(savedPath,null,owner.cookie,'DELETE')).status,400);
+    assert.equal((await req(savedPath+'/messages',{body:'Shopify: read_products,write_products'},member.cookie)).status,201);
+    assert.equal((await req(savedPath+'/messages',null,owner.cookie)).data.messages[0].body,'Shopify: read_products,write_products');
+    assert.equal((await req(savedPath+'/messages',null,outsider.cookie)).status,403);
     assert.equal((await req(root+'/rooms/'+rid,{name:'Changed'},member.cookie,'PATCH')).status,403);
     assert.equal((await req(root+'/rooms/'+rid,{name:'Changed'},outsider.cookie,'PATCH')).status,403);
     assert.equal((await req(otherRoot+'/rooms/'+rid,{name:'Changed'},outsider.cookie,'PATCH')).status,404);
@@ -66,8 +73,10 @@ test('room management, persistent text channels, message pagination and tenant p
     const older=await req(path+'/messages?before='+page.data.messages[0].id,null,member.cookie);assert.equal(older.data.messages.length,6);assert.equal(older.data.hasMore,false);
     assert.ok(older.data.messages.at(-1).id<page.data.messages[0].id);
     await svc.close();svc=await createApp({dataDir:dir,origin:'http://localhost',production:false});await new Promise(r=>svc.http.listen(0,'127.0.0.1',r));base='http://127.0.0.1:'+svc.http.address().port;
-    assert.equal((await req(root,null,owner.cookie)).data.channels[0].name,'equipe');
+    assert.equal((await req(root,null,owner.cookie)).data.channels.find(c=>c.id===cid).name,'equipe');
     assert.equal((await req(path+'/messages',null,member.cookie)).data.messages.length,50);
+    assert.equal((await req(root,null,owner.cookie)).data.channels.filter(c=>c.kind==='frequent').length,1);
+    assert.equal((await req(savedPath+'/messages',null,member.cookie)).data.messages[0].body,'Shopify: read_products,write_products');
     await req(root+'/members/'+member.data.user.id,null,owner.cookie,'DELETE');
     assert.equal((await req(path+'/messages',null,member.cookie)).status,403);
     assert.equal((await req(path+'/messages',{body:'removed'},member.cookie)).status,403);

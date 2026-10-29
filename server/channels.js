@@ -5,7 +5,7 @@ import {rateLimit} from 'express-rate-limit';
 export function registerChannels({app,db,auth,tenantAuth,owner,io,validText,fail}) {
   const root='/api/tenants/:tid';
   const room=req=>db.prepare('SELECT id,name FROM rooms WHERE id=? AND tenant_id=?').get(req.params.rid,req.params.tid);
-  const channel=req=>db.prepare('SELECT id,name FROM text_channels WHERE id=? AND tenant_id=?').get(req.params.cid,req.params.tid);
+  const channel=req=>db.prepare('SELECT id,name,kind FROM text_channels WHERE id=? AND tenant_id=?').get(req.params.cid,req.params.tid);
   const messageRow=id=>db.prepare('SELECT m.id,m.user_id AS userId,u.name,p.avatar,m.body,m.created FROM messages m JOIN users u ON u.id=m.user_id LEFT JOIN user_profiles p ON p.user_id=u.id WHERE m.id=?').get(id);
   const decorate=(m,tid,cid)=>({...m,attachments:messageFiles(db,tid,cid,m.id)});
   const key=(tid,cid)=>'text:'+tid+':'+cid;
@@ -29,7 +29,7 @@ export function registerChannels({app,db,auth,tenantAuth,owner,io,validText,fail
   app.post(root+'/channels',auth,tenantAuth,owner,(req,res)=>{
     if(!validText(req.body?.name,2,40))return fail(res,400,'Use um nome de 2 a 40 caracteres.');
     const name=req.body.name.trim();
-    if(db.prepare('SELECT count(*) AS n FROM text_channels WHERE tenant_id=?').get(req.params.tid).n>=20)return fail(res,400,'Limite de 20 canais de texto por espaço.');
+    if(db.prepare('SELECT count(*) AS n FROM text_channels WHERE tenant_id=? AND kind=\'text\'').get(req.params.tid).n>=20)return fail(res,400,'Limite de 20 canais de texto por espaço.');
     if(db.prepare('SELECT id FROM text_channels WHERE tenant_id=? AND name=? COLLATE NOCASE').get(req.params.tid,name))return fail(res,409,'Já existe um canal com esse nome.');
     const id=randomUUID();
     db.prepare('INSERT INTO text_channels(id,tenant_id,name,created) VALUES(?,?,?,?)').run(id,req.params.tid,name,Date.now());
@@ -37,6 +37,7 @@ export function registerChannels({app,db,auth,tenantAuth,owner,io,validText,fail
   });
   app.patch(root+'/channels/:cid',auth,tenantAuth,owner,(req,res)=>{
     if(!channel(req))return fail(res,404,'Canal não encontrado.');
+    if(channel(req).kind==='frequent')return fail(res,400,'Esta aba é fixa no espaço.');
     if(!validText(req.body?.name,2,40))return fail(res,400,'Use um nome de 2 a 40 caracteres.');
     const name=req.body.name.trim();
     if(db.prepare('SELECT id FROM text_channels WHERE tenant_id=? AND name=? COLLATE NOCASE AND id<>?').get(req.params.tid,name,req.params.cid))return fail(res,409,'Já existe um canal com esse nome.');
@@ -45,6 +46,7 @@ export function registerChannels({app,db,auth,tenantAuth,owner,io,validText,fail
   });
   app.delete(root+'/channels/:cid',auth,tenantAuth,owner,(req,res)=>{
     if(!channel(req))return fail(res,404,'Canal não encontrado.');
+    if(channel(req).kind==='frequent')return fail(res,400,'Esta aba é fixa no espaço.');
     db.prepare('DELETE FROM text_channels WHERE id=? AND tenant_id=?').run(req.params.cid,req.params.tid);
     res.json({ok:true});
   });
