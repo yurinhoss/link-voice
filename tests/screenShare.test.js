@@ -2,7 +2,7 @@ import {test} from 'node:test';import assert from 'node:assert/strict';import {r
 const sender=()=>({track:undefined,async replaceTrack(track){this.track=track;}});
 const peer=()=>({video:sender(),screenAudio:sender(),audio:sender()});
 test('screen capture requests tab/system sound without forcing unsupported audio sources',async()=>{
- let options;const stream={};assert.equal(await requestScreenShare({getDisplayMedia:async o=>{options=o;return stream;}}),stream);assert.equal(options.audio,true);assert.equal(options.systemAudio,'include');assert.equal(options.selfBrowserSurface,'exclude');assert.equal(options.video.frameRate,15);
+ let options;const stream={};assert.equal(await requestScreenShare({getDisplayMedia:async o=>{options=o;return stream;}}),stream);assert.equal(options.audio,true);assert.equal(options.systemAudio,'include');assert.equal(options.selfBrowserSurface,'exclude');assert.equal(options.video.frameRate.ideal,30);assert.equal(options.video.width.ideal,1920);assert.equal(options.video.height.max,1080);
 });
 test('shared audio is sent independently of the microphone, including to newly joined peers',async()=>{
  const video={id:'display-video'},audio={id:'tab-audio'},mic={id:'microphone',enabled:false},stream={getVideoTracks:()=>[video],getAudioTracks:()=>[audio]};

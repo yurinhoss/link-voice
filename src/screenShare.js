@@ -1,7 +1,9 @@
-export function requestScreenShare(mediaDevices) {
+import {shareQuality} from './mediaQuality.js';
+export function requestScreenShare(mediaDevices,quality='1080p') {
   if (!mediaDevices?.getDisplayMedia) throw new Error('Use Chrome ou Edge no computador para compartilhar a tela.');
+  const q=shareQuality(quality);
   return mediaDevices.getDisplayMedia({
-    video: {frameRate: 15},
+    video: {width: {ideal:q.width,max:q.width},height: {ideal:q.height,max:q.height},frameRate: {ideal:q.fps,max:q.fps}},
     audio: true,
     systemAudio: 'include',
     selfBrowserSurface: 'exclude',

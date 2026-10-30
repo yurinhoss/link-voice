@@ -1,9 +1,10 @@
-export async function requestMicrophone(mediaDevices) {
+export function microphoneOptions(mode='clean'){const original=mode==='original';return {echoCancellation:!original,noiseSuppression:!original,autoGainControl:!original,sampleRate:{ideal:48000},channelCount:{ideal:original?2:1}};}
+export async function requestMicrophone(mediaDevices,mode='clean') {
   if (!mediaDevices?.getUserMedia) {
     return {stream: null, notice: 'Microfone indisponível neste navegador. Você pode ouvir e compartilhar a tela. Para falar, use um navegador atualizado com HTTPS.'};
   }
   try {
-    const stream = await mediaDevices.getUserMedia({audio: {echoCancellation: true, noiseSuppression: true}, video: false});
+    const stream = await mediaDevices.getUserMedia({audio: microphoneOptions(mode), video: false});
     return {stream, notice: ''};
   } catch (error) {
     const notices = {
