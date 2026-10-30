@@ -11,7 +11,7 @@ test('room management, persistent text channels, message pagination and tenant p
   let svc=await createApp({dataDir:dir,origin:'http://localhost',production:false});
   await new Promise(r=>svc.http.listen(0,'127.0.0.1',r));
   let base='http://127.0.0.1:'+svc.http.address().port;
-  let socket;
+  let socket,secondSocket;
   async function req(path,body,cookie,method=body?'POST':'GET'){
     const response=await fetch(base+'/api'+path,{method,headers:{origin:'http://localhost',...(cookie?{cookie}:{}),...(body?{'content-type':'application/json'}:{})},body:body?JSON.stringify(body):undefined});
     return {status:response.status,data:await response.json(),cookie:response.headers.get('set-cookie')?.split(';')[0]};
@@ -43,9 +43,31 @@ test('room management, persistent text channels, message pagination and tenant p
     await new Promise((resolve,reject)=>{socket.once('connect',resolve);socket.once('connect_error',reject);});
     const joined=await new Promise((resolve,reject)=>socket.timeout(2000).emit('join',{tenantId:space.data.id,roomId:rid},(err,d)=>err?reject(err):resolve(d)));
     assert.equal(joined.ok,true);
+    const presencePath=root+'/voice-presence';
+    assert.equal((await req(presencePath)).status,401);
+    assert.equal((await req(presencePath,null,outsider.cookie)).status,403);
+    const presence=(await req(presencePath,null,member.cookie)).data;
+    const occupied=presence.rooms.find(r=>r.id===rid);
+    assert.equal(occupied.participants.length,1);assert.equal(occupied.participants[0].name,'Owner');
+    assert.ok(occupied.startedAt<=presence.serverNow);assert.equal(occupied.participants[0].joinedAt,occupied.startedAt);
+    assert.ok(presence.rooms.filter(r=>r.id!==rid).every(r=>r.participants.length===0&&r.startedAt===null));
+    secondSocket=io(base,{transports:['websocket'],extraHeaders:{origin:'http://localhost',cookie:member.cookie},reconnection:false});
+    await new Promise((resolve,reject)=>{secondSocket.once('connect',resolve);secondSocket.once('connect_error',reject);});
+    await new Promise(resolve=>secondSocket.emit('join',{tenantId:space.data.id,roomId:rid},resolve));
+    socket.emit('status',{muted:true,sharing:true});
+    await new Promise(r=>setTimeout(r,30));
+    const updated=(await req(presencePath,null,owner.cookie)).data.rooms.find(r=>r.id===rid);
+    assert.equal(updated.participants.length,2);assert.equal(updated.startedAt,occupied.startedAt);
+    assert.equal(updated.participants.find(m=>m.userId===owner.data.user.id).muted,true);
+    assert.equal(updated.participants.find(m=>m.userId===owner.data.user.id).sharing,true);
     assert.equal((await req(root+'/rooms/'+rid,null,owner.cookie,'DELETE')).status,409);
     socket.disconnect();socket=null;
     await new Promise(r=>setTimeout(r,50));
+    const continued=(await req(presencePath,null,owner.cookie)).data.rooms.find(r=>r.id===rid);
+    assert.equal(continued.participants.length,1);assert.equal(continued.startedAt,occupied.startedAt);
+    secondSocket.disconnect();secondSocket=null;await new Promise(r=>setTimeout(r,30));
+    const empty=(await req(presencePath,null,owner.cookie)).data.rooms.find(r=>r.id===rid);
+    assert.equal(empty.participants.length,0);assert.equal(empty.startedAt,null);
     assert.equal((await req(root+'/rooms/'+rid,null,owner.cookie,'DELETE')).status,200);
     assert.equal((await req(root,null,owner.cookie)).data.rooms.some(r=>r.id===rid),false);
     assert.equal((await req(root+'/channels',{name:'geral'},member.cookie)).status,403);
@@ -83,5 +105,5 @@ test('room management, persistent text channels, message pagination and tenant p
     assert.equal((await req(path,null,owner.cookie,'DELETE')).status,200);
     assert.equal((await req(path+'/messages',null,owner.cookie)).status,404);
     assert.equal(svc.db.prepare('SELECT count(*) AS n FROM messages WHERE channel_id=?').get(cid).n,0);
-  } finally {socket?.disconnect();await svc.close();await rm(dir,{recursive:true,force:true});}
+  } finally {secondSocket?.disconnect();socket?.disconnect();await svc.close();await rm(dir,{recursive:true,force:true});}
 });
