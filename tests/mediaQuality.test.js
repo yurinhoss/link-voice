@@ -26,3 +26,9 @@ test('original audio disables browser voice processing and restores it in noise 
  for(const key of ['echoCancellation','noiseSuppression','autoGainControl']){assert.equal(original[key],false);assert.equal(clean[key],true);}
  assert.equal(original.channelCount.ideal,2);let options;await requestMicrophone({getUserMedia:async o=>{options=o;return {}; }},'original');assert.deepEqual(options.audio,original);
 });
+test('clean microphone sends processed output while original bypasses it',async()=>{
+ const raw={id:'raw'},processed={id:'processed'};let calls=0;
+ const devices={getUserMedia:async()=>raw},processor=async stream=>{assert.equal(stream,raw);calls++;return processed;};
+ assert.equal((await requestMicrophone(devices,'clean',processor)).stream,processed);
+ assert.equal((await requestMicrophone(devices,'original',processor)).stream,raw);assert.equal(calls,1);
+});
