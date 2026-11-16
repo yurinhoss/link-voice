@@ -1,6 +1,6 @@
 import Playlists from './Playlists';
 import React,{useState,useEffect,useRef} from 'react';
-import {Music2,X,Play,Pause,SkipForward,Plus,Trash2,Volume2,Headphones} from 'lucide-react';
+import {Music2,X,Play,Pause,SkipForward,Plus,Trash2,Volume2,VolumeX,Headphones} from 'lucide-react';
 import {loadYouTube,playbackPosition} from './musicSync';
 function YouTubePlayer({state,volume,command,onError}){
  const mount=useRef(null),player=useRef(null),latest=useRef({state,volume,command,onError}),loaded=useRef('');latest.current={state,volume,command,onError};const [blocked,setBlocked]=useState(false),[title,setTitle]=useState('');
@@ -12,12 +12,13 @@ function YouTubePlayer({state,volume,command,onError}){
 }
 export default function MusicPanel({voice,roomName,onClose,onJoin,tenantId,userId,owner}){
  const [url,setUrl]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false),[listening,setListening]=useState(false),[tab,setTab]=useState('queue'),[adding,setAdding]=useState(false),[volume,setVolume]=useState(()=>{try{const n=Number(localStorage.getItem('link-music-volume')??50);return Number.isFinite(n)?Math.max(0,Math.min(100,n)):50;}catch{return 50;}});
+ const previousVolume=useRef(50);
  const state=voice.music,current=state?.queue[0];
  useEffect(()=>{if(!voice.active)setListening(false);},[voice.active]);
  async function command(data){setError('');try{await voice.musicCommand(data);}catch(e){setError(e.message);throw e;}}
  async function add(e){e.preventDefault();setBusy(true);try{await command({action:'add',url});setUrl('');setAdding(false);}catch{}finally{setBusy(false);}}
  const act=data=>command(data).catch(()=>{});
- function changeVolume(value){const n=Number(value);setVolume(n);try{localStorage.setItem('link-music-volume',String(n));}catch{}}
+ function changeVolume(value){const n=Number(value);if(n>0)previousVolume.current=n;setVolume(n);try{localStorage.setItem('link-music-volume',String(n));}catch{}}
  return <section className="music-dock music-compact" aria-label="Painel de música"><header><div><Music2 size={19}/><div><strong>Música</strong><small>{roomName}</small></div></div><button className="icon-button" aria-label="Fechar painel de música e parar de ouvir" onClick={onClose}><X size={18}/></button></header>
  <div className="music-tabs" role="tablist" aria-label="Biblioteca de música"><button id="music-queue-tab" role="tab" aria-selected={tab==='queue'} aria-controls="music-queue-panel" onClick={()=>setTab('queue')}>Fila <small>{state?.queue.length||0}</small></button><button id="music-library-tab" role="tab" aria-selected={tab==='playlists'} aria-controls="music-library-panel" onClick={()=>setTab('playlists')}>Playlists</button></div>
  <div className="music-tab-content"><div id="music-library-panel" role="tabpanel" aria-labelledby="music-library-tab" hidden={tab!=='playlists'}><Playlists tenantId={tenantId} userId={userId} owner={owner} voice={voice} onPlay={()=>{setListening(true);setTab('queue');}}/></div>
@@ -29,6 +30,6 @@ export default function MusicPanel({voice,roomName,onClose,onJoin,tenantId,userI
  {error&&<p className="music-error" role="alert">{error}</p>}
  {current&&voice.active&&<div className="compact-player"><div className="compact-track"><img src={'https://i.ytimg.com/vi/'+current.videoId+'/mqdefault.jpg'} alt=""/><div><strong>{current.title||'Vídeo do YouTube'}</strong><small>{state.playing?'Reproduzindo na sala':'Pausado'}</small></div><button className="icon-button" aria-label={listening?'Parar de ouvir só para mim':'Ouvir música'} title={listening?'Parar de ouvir só para mim':'Ouvir música'} aria-pressed={listening} onClick={()=>setListening(!listening)}><Headphones size={17}/></button></div>
  {listening&&<YouTubePlayer state={state} volume={volume} command={command} onError={setError}/>}
- <div className="compact-transport"><button className="compact-play" aria-label={state.playing?'Pausar música para a sala':'Tocar música para a sala'} onClick={()=>act({action:state.playing?'pause':'play'})}>{state.playing?<Pause size={20}/>:<Play size={20}/>}</button><button aria-label="Próxima música" onClick={()=>act({action:'next'})}><SkipForward size={20}/></button>{!listening&&<button className="compact-listen" onClick={()=>setListening(true)}>Ouvir</button>}<label><Volume2 size={14}/><input aria-label="Seu volume" type="range" min="0" max="100" value={volume} onChange={e=>changeVolume(e.target.value)}/><output>{volume}%</output></label></div></div>}
+ <div className="compact-transport"><button className="compact-play" aria-label={state.playing?'Pausar música para a sala':'Tocar música para a sala'} onClick={()=>act({action:state.playing?'pause':'play'})}>{state.playing?<Pause size={20}/>:<Play size={20}/>}</button><button aria-label="Próxima música" onClick={()=>act({action:'next'})}><SkipForward size={20}/></button>{!listening&&<button className="compact-listen" onClick={()=>setListening(true)}>Ouvir</button>}<div className="music-volume-control"><button className="music-mute" aria-label={volume===0?'Ativar som da música':'Silenciar música só para mim'} title={volume===0?'Ativar som':'Silenciar só para mim'} aria-pressed={volume===0} onClick={()=>changeVolume(volume===0?previousVolume.current:0)}>{volume===0?<VolumeX size={17}/>:<Volume2 size={17}/>}</button><input aria-label="Volume da música só para você" aria-valuetext={volume+' por cento'} style={{'--volume-fill':volume+'%'}} type="range" min="0" max="100" value={volume} onChange={e=>changeVolume(e.target.value)}/><output>{volume}%</output></div></div></div>}
  </section>;
 }
