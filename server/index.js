@@ -1,3 +1,4 @@
+import {registerPlaylists} from './playlists.js';
 import {registerChatFiles} from './chatFiles.js';
 import {registerMusic} from './music.js';
 import {registerAssets,assetUrl} from './assets.js';
@@ -35,6 +36,7 @@ export async function createApp({dataDir=process.env.DATA_DIR||'./data',origin=p
  app.post('/api/tenants/:tid/rooms',auth,tenantAuth,owner,(req,res)=>{if(!validText(req.body?.name,2,40))return fail(res,400,'Use um nome de 2 a 40 caracteres.');if(db.prepare('SELECT count(*) as n FROM rooms WHERE tenant_id=?').get(req.params.tid).n>=20)return fail(res,400,'Limite de 20 salas por espaço.');const id=randomUUID();db.prepare('INSERT INTO rooms(id,tenant_id,name,created) VALUES(?,?,?,?)').run(id,req.params.tid,req.body.name.trim(),Date.now());res.status(201).json({id});});
  registerAssets({app,db,auth,tenantAuth,fail});
  registerChatFiles({app,db,auth,tenantAuth,fail});
+ registerPlaylists({app,db,auth,tenantAuth,fail});
  registerChannels({app,db,auth,tenantAuth,owner,io,validText,fail});
  app.post('/api/tenants/:tid/invites',auth,tenantAuth,owner,(req,res)=>{const token=randomBytes(24).toString('hex');db.prepare('DELETE FROM invites WHERE tenant_id=?').run(req.params.tid);const expires=Date.now()+86400000;db.prepare('INSERT INTO invites(token,tenant_id,expires) VALUES(?,?,?)').run(hash(token),req.params.tid,expires);res.json({token,expires,maxUses:20});});
  app.delete('/api/tenants/:tid/invites',auth,tenantAuth,owner,(req,res)=>{db.prepare('DELETE FROM invites WHERE tenant_id=?').run(req.params.tid);res.json({ok:true});});
